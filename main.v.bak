@@ -3,7 +3,7 @@ module get_xor_xnor_bit(
 	input wire [7:0] bits_in,
 	input wire [3:0] curr_bit,
 	input wire xor_xnor,
-	output reg out_bit
+	output wire out_bit
 );
 
 	always @* begin
@@ -27,7 +27,7 @@ endmodule
 module tmds_8_to_10_bit(
 	input wire [7:0] bits_in,
 	input wire [9:0] bits_out
-);
+)
 	wire [3:0] num_ones = bits_in[0] + bits_in[1] + bits_in[2] + bits_in[3] + bits_in[4] + bits_in[5] + bits_in[6] + bits_in[7];
 
 
