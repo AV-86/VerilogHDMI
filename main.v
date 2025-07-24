@@ -28,10 +28,15 @@
 
 module get_xor_xnor_encoded_9_bit(
 	input wire [7:0] bits_in,
-	input wire xor_xnor,
 	output reg [8:0] xor_xnor_encoded_9_bit
 );
+	reg [3:0] n_ones_inp;
+	reg xnor_xor;
+	
 	always @* begin
+		n_ones_inp = bits_in[0]+bits_in[1]+bits_in[2]+bits_in[3]+bits_in[4]+bits_in[5]+bits_in[6]+bits_in[7];
+		xnor_xor = (n_ones_inp > 4) | ((n_ones_inp == 4) & ~bits_in[0]);
+
 		xor_xnor_encoded_9_bit[0] = bits_in[0];
 		xor_xnor_encoded_9_bit[1] = xor_xnor_encoded_9_bit[0] ^ bits_in[1];
 		xor_xnor_encoded_9_bit[2] = xor_xnor_encoded_9_bit[1] ^ bits_in[2];
@@ -41,10 +46,35 @@ module get_xor_xnor_encoded_9_bit(
 		xor_xnor_encoded_9_bit[6] = xor_xnor_encoded_9_bit[5] ^ bits_in[6];
 		xor_xnor_encoded_9_bit[7] = xor_xnor_encoded_9_bit[6] ^ bits_in[7];
 		xor_xnor_encoded_9_bit[8] = 1;
-		xor_xnor_encoded_9_bit = xor_xnor ? xor_xnor_encoded_9_bit : ~xor_xnor_encoded_9_bit;
+		xor_xnor_encoded_9_bit = xnor_xor ? ~xor_xnor_encoded_9_bit : xor_xnor_encoded_9_bit ;
 	end
 endmodule
 
+module mydvi(
+	input wire tmds_clk,
+	input wire pix_clk
+);
+	reg [12:0] x_cntr;
+	reg [12:0] y_cntr;
+
+	localparam [12:0] MAX_X_ALL = 720;
+	localparam [12:0] MAX_Y_ALL = 512;
+
+	always @(posedge pix_clk) begin
+		if(x_cntr == MAX_X_ALL)begin
+			x_cntr <= 0;
+			if(y_cntr == MAX_Y_ALL) begin
+				y_cntr <= 0;
+			end else begin
+				y_cntr <= y_cntr + 1;
+			end
+		end else begin
+			x_cntr <= x_cntr + 1;
+		end
+	end
+
+
+endmodule
 
 module main(
 	input wire clk,
@@ -53,3 +83,38 @@ module main(
 	output wire led6
 );
 endmodule
+
+
+module ge
+
+
+`timescale 1ns/1ps
+module tb;
+
+  reg  [7:0] in_data;
+  wire [8:0] out_data;
+
+  integer i;
+
+  // Подключение тестируемого устройства
+  get_xor_xnor_encoded_9_bit dut (
+    .bits_in(in_data),
+    .xor_xnor_encoded_9_bit(out_data)
+  );
+
+  initial begin
+    $display("=== testing... ===");
+
+    // Перебор нескольких входных комбинаций
+    for (i = 0; i < 10; i = i + 1) begin
+      in_data = i * 17;  // Примеры: 0, 17, 34, ..., 153
+      #5;
+      $display("Вход: %b | Выход: %b", in_data, out_data);
+    end
+
+    $display("=== Конец теста ===");
+    $stop;
+  end
+
+endmodule
+
