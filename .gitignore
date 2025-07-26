@@ -119,7 +119,7 @@ settings.txt
 *.qgs
 *.qsys_edit
 *.qgs_edit
-*.qpf
+# *.qpf
 # *.qsf
 *.qws
 *.qip

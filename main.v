@@ -1,31 +1,3 @@
-
-// module TMDS_encoder(
-// 	input clk,
-// 	input [7:0] VD,  // video data (red, green or blue)
-// 	input [1:0] CD,  // control data
-// 	input VDE,  // video data enable, to choose between CD (when VDE=0) and VD (when VDE=1)
-// 	output reg [9:0] TMDS = 0
-//     );
-
-//     wire [3:0] Nb1s = VD[0] + VD[1] + VD[2] + VD[3] + VD[4] + VD[5] + VD[6] + VD[7];
-//     wire XNOR = (Nb1s>4'd4) || (Nb1s==4'd4 && VD[0]==1'b0);
-//     wire [8:0] q_m = {~XNOR, q_m[6:0] ^ VD[7:1] ^ {7{XNOR}}, VD[0]};
-
-//     reg [3:0] balance_acc = 0;
-//     wire [3:0] balance = q_m[0] + q_m[1] + q_m[2] + q_m[3] + q_m[4] + q_m[5] + q_m[6] + q_m[7] - 4'd4;
-//     wire balance_sign_eq = (balance[3] == balance_acc[3]);
-//     wire invert_q_m = (balance==0 || balance_acc==0) ? ~q_m[8] : balance_sign_eq;
-//     wire [3:0] balance_acc_inc = balance - ({q_m[8] ^ ~balance_sign_eq} & ~(balance==0 || balance_acc==0));
-//     wire [3:0] balance_acc_new = invert_q_m ? balance_acc-balance_acc_inc : balance_acc+balance_acc_inc;
-//     wire [9:0] TMDS_data = {invert_q_m, q_m[8], q_m[7:0] ^ {8{invert_q_m}}};
-//     wire [9:0] TMDS_code = CD[1] ? (CD[0] ? 10'b1010101011 : 10'b0101010100) : (CD[0] ? 10'b0010101011 : 10'b1101010100);
-
-//     always @(posedge clk) TMDS <= VDE ? TMDS_data : TMDS_code;
-//     always @(posedge clk) balance_acc <= VDE ? balance_acc_new : 4'h0;
-// endmodule
-
-
-
 module get_xor_xnor_encoded_9_bit(
 	input wire [7:0] bits_in,
 	output reg [8:0] xor_xnor_encoded_9_bit
@@ -50,15 +22,60 @@ module get_xor_xnor_encoded_9_bit(
 	end
 endmodule
 
+
+module get_dvi_tmds_10_bit_from_8(
+	input wire [7:0] D, // video data
+	input wire DE, // video data enabled
+	input wire C0, //hSync
+	input wire C1, //vSync
+	input wire [31:0] PrevBitCnt,
+	
+	output reg [9:0] tmds,
+	output reg [31:0] BitCnt
+);
+	reg [8:0] q_m;
+	reg [3:0] N1_q_m;
+
+	get_xor_xnor_encoded_9_bit(.bits_in(D), .xor_xnor_encoded_9_bit(q_m));
+
+
+	always @* begin
+		N1_q_m = q_m[0]+q_m[1]+q_m[2]+q_m[3]+q_m[4]+q_m[5]+q_m[6]+q_m[7];
+		if(~DE)begin 
+			BitCnt = 0;
+			case({C1, C0})
+				2'b00: tmds = 10'b0010101011;
+				2'b01: tmds = 10'b1101010100;
+				2'b10: tmds = 10'b0010101010;
+				2'b11: tmds = 10'b1101010101;
+			endcase
+		end else begin
+			
+		end
+
+	end
+
+
+endmodule
+
+
 module mydvi(
 	input wire tmds_clk,
-	input wire pix_clk
+	input wire pix_clk,
+
+	output reg signal_R,
+	output reg signal_G,
+	output reg signal_B
 );
 	reg [12:0] x_cntr;
 	reg [12:0] y_cntr;
 
-	localparam [12:0] MAX_X_ALL = 720;
-	localparam [12:0] MAX_Y_ALL = 512;
+	reg [9:0] OutShiftr_R;
+	reg [9:0] OutShiftr_G;
+	reg [9:0] OutShiftr_B;
+
+	localparam [12:0] MAX_X_ALL = 800;
+	localparam [12:0] MAX_Y_ALL = 525;
 
 	always @(posedge pix_clk) begin
 		if(x_cntr == MAX_X_ALL)begin
@@ -73,6 +90,15 @@ module mydvi(
 		end
 	end
 
+	always @(posedge tmds_clk) begin
+		signal_R <= OutShiftr_R[9];
+		OutShiftr_R <= {OutShiftr_R[8:0], 1};
+		signal_G <= OutShiftr_G[9];
+		OutShiftr_G <= {OutShiftr_G[8:0], 1};
+		signal_B <= OutShiftr_B[9];
+		OutShiftr_B <= {OutShiftr_B[8:0], 1};
+	end
+
 
 endmodule
 
@@ -85,36 +111,5 @@ module main(
 endmodule
 
 
-module ge
 
-
-`timescale 1ns/1ps
-module tb;
-
-  reg  [7:0] in_data;
-  wire [8:0] out_data;
-
-  integer i;
-
-  // Подключение тестируемого устройства
-  get_xor_xnor_encoded_9_bit dut (
-    .bits_in(in_data),
-    .xor_xnor_encoded_9_bit(out_data)
-  );
-
-  initial begin
-    $display("=== testing... ===");
-
-    // Перебор нескольких входных комбинаций
-    for (i = 0; i < 10; i = i + 1) begin
-      in_data = i * 17;  // Примеры: 0, 17, 34, ..., 153
-      #5;
-      $display("Вход: %b | Выход: %b", in_data, out_data);
-    end
-
-    $display("=== Конец теста ===");
-    $stop;
-  end
-
-endmodule
 
