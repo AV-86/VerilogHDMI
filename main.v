@@ -28,29 +28,51 @@ module get_dvi_tmds_10_bit_from_8(
 	input wire DE, // video data enabled
 	input wire C0, //hSync
 	input wire C1, //vSync
-	input wire [31:0] PrevBitCnt,
+	input wire signed [31:0] PrevBitCnt,
 	
 	output reg [9:0] tmds,
-	output reg [31:0] BitCnt
+	output reg signed [31:0] BitCnt
 );
 	reg [8:0] q_m;
 	reg [3:0] N1_q_m;
 
-	get_xor_xnor_encoded_9_bit(.bits_in(D), .xor_xnor_encoded_9_bit(q_m));
-
+	get_xor_xnor_encoded_9_bit q_m_coder(.bits_in(D), .xor_xnor_encoded_9_bit(q_m));
 
 	always @* begin
 		N1_q_m = q_m[0]+q_m[1]+q_m[2]+q_m[3]+q_m[4]+q_m[5]+q_m[6]+q_m[7];
 		if(~DE)begin 
-			BitCnt = 0;
+			BitCnt <= 0;
 			case({C1, C0})
-				2'b00: tmds = 10'b0010101011;
-				2'b01: tmds = 10'b1101010100;
-				2'b10: tmds = 10'b0010101010;
-				2'b11: tmds = 10'b1101010101;
+				2'b00: tmds <= 10'b0010101011;
+				2'b01: tmds <= 10'b1101010100;
+				2'b10: tmds <= 10'b0010101010;
+				2'b11: tmds <= 10'b1101010101;
 			endcase
 		end else begin
-			
+			if((PrevBitCnt == 0) || (N1_q_m == 4))begin 
+				tmds[9] <= ~q_m[8];
+				tmds[8] <= q_m[8];
+				tmds[7:0] <= ((q_m[8]) ? q_m[7:0] : ~q_m[7:0]);
+
+				if(~q_m[8])begin 
+					BitCnt = PrevBitCnt + (8 - 2 * N1_q_m);
+				end else begin
+					BitCnt = PrevBitCnt + (2 * N1_q_m - 8);
+				end
+
+			end else begin
+				if(((PrevBitCnt > 0) && (N1_q_m > 4)) || ((PrevBitCnt < 0) && (N1_q_m < 4)))begin
+					tmds[9] <= 1;
+					tmds[8] <= q_m[8];
+					tmds[7:0] <= ~q_m[7:0];
+					BitCnt <= PrevBitCnt + 2 * q_m[8] + (8 - 2 * N1_q_m);
+				end else begin
+					tmds[9] <= 0;
+					tmds[8] <= q_m[8];
+					tmds[7:0] <= q_m[7:0];
+					BitCnt <= PrevBitCnt - 2 * ~q_m[8] + (2 * N1_q_m - 8);
+				end
+			end
 		end
 
 	end
