@@ -96,8 +96,44 @@ module mydvi(
 	reg [9:0] OutShiftr_G;
 	reg [9:0] OutShiftr_B;
 
+	reg signed[31:0] PrevBitCntR;
+	reg signed[31:0] PrevBitCntG;
+	reg signed[31:0] PrevBitCntB;
+
+	wire signed[31:0] BitCntR;
+	wire signed[31:0] BitCntG;
+	wire signed[31:0] BitCntB;
+
+
 	localparam [12:0] MAX_X_ALL = 800;
 	localparam [12:0] MAX_Y_ALL = 525;
+
+	wire [9:0] tmds_r;
+	wire [9:0] tmds_g;
+	wire [9:0] tmds_b;
+
+	reg hSync;
+	reg vSync;
+	reg DrawArea;
+
+	get_dvi_tmds_10_bit_from_8 cdr_insr_r(
+		.D(D),
+		.DE(DrawArea), // video data enabled
+		.C0(hSync), //hSync
+		.C1(vSync), //vSync
+		.PrevBitCnt(PrevBitCntR),
+		
+		.tmds(tmds_r),
+		.BitCnt(BitCntR)
+	);
+
+	always @(posedge pix_clk) DrawArea <= (x_cntr<640) && (y_cntr<480);
+	always @(posedge pix_clk) hSync <= (x_cntr>=656) && (x_cntr<752);
+	always @(posedge pix_clk) vSync <= (y_cntr>=490) && (y_cntr<492);
+
+	always @(posedge pix_clk) PrevBitCntR <= BitCntR;
+	always @(posedge pix_clk) PrevBitCntG <= BitCntG;
+	always @(posedge pix_clk) PrevBitCntB <= BitCntB;
 
 	always @(posedge pix_clk) begin
 		if(x_cntr == MAX_X_ALL)begin
@@ -110,6 +146,7 @@ module mydvi(
 		end else begin
 			x_cntr <= x_cntr + 1;
 		end
+		
 	end
 
 	always @(posedge tmds_clk) begin
