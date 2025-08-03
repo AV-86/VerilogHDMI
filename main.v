@@ -33,7 +33,7 @@ module get_dvi_tmds_10_bit_from_8(
 	output reg [9:0] tmds,
 	output reg signed [31:0] BitCnt
 );
-	reg [8:0] q_m;
+	wire [8:0] q_m;
 	reg [3:0] N1_q_m;
 
 	get_xor_xnor_encoded_9_bit q_m_coder(.bits_in(D), .xor_xnor_encoded_9_bit(q_m));
@@ -87,8 +87,12 @@ module mydvi(
 
 	output reg signal_R,
 	output reg signal_G,
-	output reg signal_B
+	output reg signal_B,
+
+	output reg [9:0] tst_tmds_r,
+	output reg signed [31:0] tst_PrevBitCntR
 );
+
 	reg [12:0] x_cntr;
 	reg [12:0] y_cntr;
 
@@ -116,16 +120,10 @@ module mydvi(
 	reg vSync;
 	reg DrawArea;
 
-	get_dvi_tmds_10_bit_from_8 cdr_insr_r(
-		.D(D),
-		.DE(DrawArea), // video data enabled
-		.C0(hSync), //hSync
-		.C1(vSync), //vSync
-		.PrevBitCnt(PrevBitCntR),
-		
-		.tmds(tmds_r),
-		.BitCnt(BitCntR)
-	);
+	get_dvi_tmds_10_bit_from_8 cdr_insr_r(.D(145), .DE(DrawArea), .C0(0), .C1(0), .PrevBitCnt(PrevBitCntR),.tmds(tmds_r),.BitCnt(BitCntR));
+	get_dvi_tmds_10_bit_from_8 cdr_insr_g(.D(200), .DE(DrawArea), .C0(0), .C1(0), .PrevBitCnt(PrevBitCntR),.tmds(tmds_g),.BitCnt(BitCntG));
+	get_dvi_tmds_10_bit_from_8 cdr_insr_b(.D(100), .DE(DrawArea), .C0(hSync), .C1(vSync), .PrevBitCnt(PrevBitCntR),.tmds(tmds_b),.BitCnt(BitCntB));
+
 
 	always @(posedge pix_clk) DrawArea <= (x_cntr<640) && (y_cntr<480);
 	always @(posedge pix_clk) hSync <= (x_cntr>=656) && (x_cntr<752);
@@ -134,6 +132,15 @@ module mydvi(
 	always @(posedge pix_clk) PrevBitCntR <= BitCntR;
 	always @(posedge pix_clk) PrevBitCntG <= BitCntG;
 	always @(posedge pix_clk) PrevBitCntB <= BitCntB;
+
+	always @(posedge pix_clk) OutShiftr_R <= tmds_r;
+	always @(posedge pix_clk) OutShiftr_G <= tmds_g;
+	always @(posedge pix_clk) OutShiftr_B <= tmds_b;
+	
+	/*test values start*/
+	always @(posedge pix_clk) tst_tmds_r <= tmds_r;
+	always @(posedge pix_clk) tst_PrevBitCntR <= PrevBitCntR;
+	/*test values end*/
 
 	always @(posedge pix_clk) begin
 		if(x_cntr == MAX_X_ALL)begin
@@ -145,8 +152,7 @@ module mydvi(
 			end
 		end else begin
 			x_cntr <= x_cntr + 1;
-		end
-		
+		end	
 	end
 
 	always @(posedge tmds_clk) begin
