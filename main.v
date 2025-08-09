@@ -74,32 +74,18 @@ module get_dvi_tmds_10_bit_from_8(
 				end
 			end
 		end
-
 	end
-
-
 endmodule
 
-
 module mydvi(
-	input wire tmds_clk,
 	input wire pix_clk,
+	input wire tmds_clk,
 
-	output reg signal_R,
-	output reg signal_G,
-	output reg signal_B,
-
-	output reg [9:0] tst_tmds_r,
-	output reg signed [31:0] tst_PrevBitCntR
+	output reg signal_r,
+	output reg signal_g,
+	output reg signal_b
 );
-
-	reg [12:0] x_cntr;
-	reg [12:0] y_cntr;
-
-	reg [9:0] OutShiftr_R;
-	reg [9:0] OutShiftr_G;
-	reg [9:0] OutShiftr_B;
-
+	
 	reg signed[31:0] PrevBitCntR;
 	reg signed[31:0] PrevBitCntG;
 	reg signed[31:0] PrevBitCntB;
@@ -108,6 +94,11 @@ module mydvi(
 	wire signed[31:0] BitCntG;
 	wire signed[31:0] BitCntB;
 
+	reg [12:0] x_cntr;
+	reg [12:0] y_cntr;
+	reg DrawArea;
+	reg hSync;
+	reg vSync;
 
 	localparam [12:0] MAX_X_ALL = 800;
 	localparam [12:0] MAX_Y_ALL = 525;
@@ -116,32 +107,18 @@ module mydvi(
 	wire [9:0] tmds_g;
 	wire [9:0] tmds_b;
 
-	reg hSync;
-	reg vSync;
-	reg DrawArea;
+	reg [9:0] tmds_r_load;
+	reg [9:0] tmds_g_load;
+	reg [9:0] tmds_b_load;
 
-	get_dvi_tmds_10_bit_from_8 cdr_insr_r(.D(145), .DE(DrawArea), .C0(0), .C1(0), .PrevBitCnt(PrevBitCntR),.tmds(tmds_r),.BitCnt(BitCntR));
-	get_dvi_tmds_10_bit_from_8 cdr_insr_g(.D(200), .DE(DrawArea), .C0(0), .C1(0), .PrevBitCnt(PrevBitCntR),.tmds(tmds_g),.BitCnt(BitCntG));
-	get_dvi_tmds_10_bit_from_8 cdr_insr_b(.D(100), .DE(DrawArea), .C0(hSync), .C1(vSync), .PrevBitCnt(PrevBitCntR),.tmds(tmds_b),.BitCnt(BitCntB));
+	reg [9:0] shift_reg_r;
+	reg [9:0] shift_reg_g;
+	reg [9:0] shift_reg_b;
 
-
-	always @(posedge pix_clk) DrawArea <= (x_cntr<640) && (y_cntr<480);
-	always @(posedge pix_clk) hSync <= (x_cntr>=656) && (x_cntr<752);
-	always @(posedge pix_clk) vSync <= (y_cntr>=490) && (y_cntr<492);
-
-	always @(posedge pix_clk) PrevBitCntR <= BitCntR;
-	always @(posedge pix_clk) PrevBitCntG <= BitCntG;
-	always @(posedge pix_clk) PrevBitCntB <= BitCntB;
-
-	always @(posedge pix_clk) OutShiftr_R <= tmds_r;
-	always @(posedge pix_clk) OutShiftr_G <= tmds_g;
-	always @(posedge pix_clk) OutShiftr_B <= tmds_b;
+	get_dvi_tmds_10_bit_from_8 cdr_insr_r(.D(145), .DE(DrawArea), .C0(0),     .C1(0),     .PrevBitCnt(PrevBitCntR),.tmds(tmds_r),.BitCnt(BitCntR));
+	get_dvi_tmds_10_bit_from_8 cdr_insr_g(.D(200), .DE(DrawArea), .C0(0),     .C1(0),     .PrevBitCnt(PrevBitCntG),.tmds(tmds_g),.BitCnt(BitCntG));
+	get_dvi_tmds_10_bit_from_8 cdr_insr_b(.D(100), .DE(DrawArea), .C0(hSync), .C1(vSync), .PrevBitCnt(PrevBitCntB),.tmds(tmds_b),.BitCnt(BitCntB));
 	
-	/*test values start*/
-	always @(posedge pix_clk) tst_tmds_r <= tmds_r;
-	always @(posedge pix_clk) tst_PrevBitCntR <= PrevBitCntR;
-	/*test values end*/
-
 	always @(posedge pix_clk) begin
 		if(x_cntr == MAX_X_ALL)begin
 			x_cntr <= 0;
@@ -154,18 +131,92 @@ module mydvi(
 			x_cntr <= x_cntr + 1;
 		end	
 	end
+	
+	always @(posedge pix_clk) DrawArea <= (x_cntr<640) && (y_cntr<480);
+	always @(posedge pix_clk) hSync <= (x_cntr>=656) && (x_cntr<752);
+	always @(posedge pix_clk) vSync <= (y_cntr>=490) && (y_cntr<492);
+
+	always @(posedge pix_clk) PrevBitCntR <= BitCntR;
+	always @(posedge pix_clk) PrevBitCntG <= BitCntG;
+	always @(posedge pix_clk) PrevBitCntB <= BitCntB;
+
+	always @(posedge pix_clk) tmds_r_load <= tmds_r;
+	always @(posedge pix_clk) tmds_g_load <= tmds_g;
+	always @(posedge pix_clk) tmds_b_load <= tmds_b;
+	
+	reg [3:0] bit_cnt_r;
+	reg [3:0] bit_cnt_g;
+	reg [3:0] bit_cnt_b;
 
 	always @(posedge tmds_clk) begin
-		signal_R <= OutShiftr_R[9];
-		OutShiftr_R <= {OutShiftr_R[8:0], 1};
-		signal_G <= OutShiftr_G[9];
-		OutShiftr_G <= {OutShiftr_G[8:0], 1};
-		signal_B <= OutShiftr_B[9];
-		OutShiftr_B <= {OutShiftr_B[8:0], 1};
+		if(bit_cnt_r == 0) begin
+			signal_r <= tmds_r_load[9];
+			shift_reg_r <= {tmds_r_load[8:0], 1'b0};
+			bit_cnt_r <= 9;
+		end else begin
+			signal_r <= shift_reg_r[9];
+			shift_reg_r <= {shift_reg_r[8:0], 1'b0};
+			bit_cnt_r <= bit_cnt_r - 1;
+		end
 	end
 
+	always @(posedge tmds_clk) begin
+		if(bit_cnt_g == 0) begin
+			signal_g <= tmds_g_load[9];
+			shift_reg_g <= {tmds_g_load[8:0], 1'b0};
+			bit_cnt_g <= 9;
+		end else begin
+			signal_g <= shift_reg_g[9];
+			shift_reg_g <= {shift_reg_g[8:0], 1'b0};
+			bit_cnt_g <= bit_cnt_g - 1;
+		end
+	end
+
+	always @(posedge tmds_clk) begin
+		if(bit_cnt_b == 0) begin
+			signal_b <= tmds_b_load[9];
+			shift_reg_b <= {tmds_b_load[8:0], 1'b0};
+			bit_cnt_b <= 9;
+		end else begin
+			signal_b <= shift_reg_b[9];
+			shift_reg_b <= {shift_reg_b[8:0], 1'b0};
+			bit_cnt_b <= bit_cnt_b - 1;
+		end
+	end
+	
+
+/* not synthesized */
+	initial begin
+        x_cntr = 0;
+        y_cntr = 0;
+
+		PrevBitCntR = 0;
+		PrevBitCntG = 0;
+		PrevBitCntB = 0;
+		tmds_r_load = 0;
+		tmds_g_load = 0;
+		tmds_b_load = 0;
+
+		shift_reg_r = 0;
+		shift_reg_g = 0;
+		shift_reg_b = 0;
+
+		bit_cnt_r = 0;
+		bit_cnt_g = 0;
+		bit_cnt_b = 0;
+
+		DrawArea = 0;
+		hSync = 0;
+		vSync = 0;
+    end
+/* end not synthesized */
 
 endmodule
+
+
+
+
+
 
 module main(
 	input wire clk,

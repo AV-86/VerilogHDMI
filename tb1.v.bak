@@ -1,0 +1,27 @@
+`timescale 1ns/1ps
+module tb;
+
+  reg pix_clk;  
+
+  wire [12:0] x_cntr;
+  wire [12:0] y_cntr;
+  wire DrawArea; 
+
+  // Генерация тактового сигнала
+  initial pix_clk = 0;
+  always #40 pix_clk = ~pix_clk;
+
+  // Инстанс тестируемого модуля
+  mydvi_test dut(
+    .pix_clk(pix_clk),     // правильное подключение портов
+    .x_cntr(x_cntr),       // через .port_name(signal_name)
+    .y_cntr(y_cntr),
+    .DrawArea(DrawArea)
+  );
+  
+  initial begin
+    // Здесь можно добавить дополнительные проверки
+    #4000 $stop; // остановка симуляции через 400 единиц времени
+  end
+
+endmodule
