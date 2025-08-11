@@ -115,6 +115,8 @@ module mydvi(
 	reg [9:0] shift_reg_g;
 	reg [9:0] shift_reg_b;
 
+
+	
 	get_dvi_tmds_10_bit_from_8 cdr_insr_r(.D(145), .DE(DrawArea), .C0(0),     .C1(0),     .PrevBitCnt(PrevBitCntR),.tmds(tmds_r),.BitCnt(BitCntR));
 	get_dvi_tmds_10_bit_from_8 cdr_insr_g(.D(200), .DE(DrawArea), .C0(0),     .C1(0),     .PrevBitCnt(PrevBitCntG),.tmds(tmds_g),.BitCnt(BitCntG));
 	get_dvi_tmds_10_bit_from_8 cdr_insr_b(.D(100), .DE(DrawArea), .C0(hSync), .C1(vSync), .PrevBitCnt(PrevBitCntB),.tmds(tmds_b),.BitCnt(BitCntB));
@@ -214,16 +216,44 @@ module mydvi(
 endmodule
 
 
-
-
-
-
 module main(
 	input wire clk,
 	
+	
 	output wire led5,
-	output wire led6
+	output wire led6,
+	
+	output wire HDMI_CLK,
+	output wire HDMI_D0,
+	output wire HDMI_D1,
+	output wire HDMI_D2
 );
+
+	wire tmds_clk;
+	wire pix_clk;
+
+	PLL1 PLL1_inst(.inclk0(clk), .c0(tmds_clk), .c1(pix_clk));
+	
+	assign HDMI_CLK = pix_clk;
+	
+	
+	reg [31:0] cnt1;
+	
+	assign led5 = cnt1[23];
+	
+	always@(posedge HDMI_CLK)begin
+		cnt1 <= cnt1 + 1;		
+	end
+	
+	mydvi mydvi_ist1(
+		.pix_clk(pix_clk),
+		.tmds_clk(tmds_clk),
+
+		.signal_r(HDMI_D0),
+		.signal_g(HDMI_D1),
+		.signal_b(HDMI_D2)
+	);
+
 endmodule
 
 

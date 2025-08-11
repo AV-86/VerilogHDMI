@@ -39,7 +39,7 @@
 
 set_global_assignment -name FAMILY "Cyclone 10 LP"
 set_global_assignment -name DEVICE 10CL016YU484C8G
-set_global_assignment -name TOP_LEVEL_ENTITY get_xor_xnor_encoded_9_bit
+set_global_assignment -name TOP_LEVEL_ENTITY main
 set_global_assignment -name ORIGINAL_QUARTUS_VERSION 24.1STD.0
 set_global_assignment -name PROJECT_CREATION_TIME_DATE "19:02:25  JULY 05, 2025"
 set_global_assignment -name LAST_QUARTUS_VERSION "24.1std.0 Lite Edition"
@@ -75,24 +75,13 @@ set_location_assignment PIN_W20 -to disp_7seg_segments[5]
 set_location_assignment PIN_R20 -to disp_7seg_segments[6]
 set_location_assignment PIN_W19 -to disp_7seg_segments[7]
 set_location_assignment PIN_AA14 -to HDMI_CLK
-set_location_assignment PIN_AB14 -to HDMI_CLK_m
 set_location_assignment PIN_AA15 -to HDMI_D0
-set_location_assignment PIN_AB15 -to HDMI_D0_m
 set_location_assignment PIN_AA16 -to HDMI_D1
-set_location_assignment PIN_AB16 -to HDMI_D1_m
 set_location_assignment PIN_AA20 -to HDMI_D2
-set_location_assignment PIN_AB20 -to HDMI_D2_m
 set_location_assignment PIN_AB13 -to HDMI_CSL
 set_location_assignment PIN_AA10 -to HDMI_SDA
 set_location_assignment PIN_AB10 -to HDMI_HPD
 set_location_assignment PIN_AA13 -to HDMI_CEC
-set_instance_assignment -name IO_STANDARD LVDS -to HDMI_CLK
-set_instance_assignment -name IO_STANDARD LVDS -to HDMI_D0
-set_instance_assignment -name IO_STANDARD LVDS -to HDMI_D1
-set_instance_assignment -name IO_STANDARD LVDS -to HDMI_D2
-set_global_assignment -name PARTITION_NETLIST_TYPE SOURCE -section_id Top
-set_global_assignment -name PARTITION_FITTER_PRESERVATION_LEVEL PLACEMENT_AND_ROUTING -section_id Top
-set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top
 set_global_assignment -name EDA_TEST_BENCH_ENABLE_STATUS TEST_BENCH_MODE -section_id eda_simulation
 set_global_assignment -name EDA_NATIVELINK_SIMULATION_TEST_BENCH tb -section_id eda_simulation
 set_global_assignment -name EDA_TEST_BENCH_NAME tb -section_id eda_simulation
@@ -102,4 +91,12 @@ set_global_assignment -name EDA_TEST_BENCH_MODULE_NAME tb -section_id tb
 set_global_assignment -name VERILOG_FILE tb1.v
 set_global_assignment -name VERILOG_FILE main.v
 set_global_assignment -name EDA_TEST_BENCH_FILE tb1.v -section_id tb
+set_global_assignment -name QIP_FILE PLL1.qip
+set_global_assignment -name PARTITION_NETLIST_TYPE SOURCE -section_id Top
+set_global_assignment -name PARTITION_FITTER_PRESERVATION_LEVEL PLACEMENT_AND_ROUTING -section_id Top
+set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top
+set_instance_assignment -name IO_STANDARD LVDS_E_3R -to HDMI_CLK
+set_instance_assignment -name IO_STANDARD LVDS_E_3R -to HDMI_D0
+set_instance_assignment -name IO_STANDARD LVDS_E_3R -to HDMI_D1
+set_instance_assignment -name IO_STANDARD LVDS_E_3R -to HDMI_D2
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top

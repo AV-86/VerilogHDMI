@@ -1,26 +1,25 @@
 `timescale 1ns/1ps
 module tb;
 
-  reg pix_clk;
-  reg tmds_clk;
+  reg clk;
 
-	wire signal_r;
-	wire signal_g;
-	wire signal_b;
+	wire HDMI_CLK;
+	wire HDMI_D0;
+	wire HDMI_D1;
+	wire HDMI_D2;
 
-  initial pix_clk = 0;
-  initial tmds_clk = 0;
+  initial clk = 0;
   
-  always #20 pix_clk = ~pix_clk;
-  always #2 tmds_clk = ~tmds_clk;
+  always #10 clk = ~clk; 
+	
+ 
+  main dut(
+	.clk(clk),
 
-  mydvi dut(
-    .pix_clk(pix_clk),
-    .tmds_clk(tmds_clk),
-
-    .signal_r(signal_r),
-    .signal_g(signal_g),
-    .signal_b(signal_b)
+	.HDM_CLK(HDMI_CLK),
+	.HDM_D0(HDMI_D0),
+	.HDM_D1(HDMI_D1),
+	.HDM_D2(HDMI_D2)
   );
   
   initial begin
