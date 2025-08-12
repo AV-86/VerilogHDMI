@@ -7,7 +7,7 @@ module get_xor_xnor_encoded_9_bit(
 	
 	always @* begin
 		n_ones_inp = bits_in[0]+bits_in[1]+bits_in[2]+bits_in[3]+bits_in[4]+bits_in[5]+bits_in[6]+bits_in[7];
-		xnor_xor = (n_ones_inp > 4) | ((n_ones_inp == 4) & ~bits_in[0]);
+		xnor_xor = (n_ones_inp > 4) | ((n_ones_inp == 4) & (bits_in[0] == 0));
 
 		xor_xnor_encoded_9_bit[0] = bits_in[0];
 		xor_xnor_encoded_9_bit[1] = xor_xnor_encoded_9_bit[0] ^ bits_in[1];
@@ -83,7 +83,10 @@ module mydvi(
 
 	output reg signal_r,
 	output reg signal_g,
-	output reg signal_b
+	output reg signal_b,
+
+	output wire [7:0] disp_7seg_segments,
+	output wire [2:0] disp_7seg_dig	
 );
 	
 	reg signed[31:0] PrevBitCntR;
@@ -116,10 +119,19 @@ module mydvi(
 	reg [9:0] shift_reg_b;
 
 
+	reg[7:0] R; reg[7:0] G; reg[7:0] B;
 	
-	get_dvi_tmds_10_bit_from_8 cdr_insr_r(.D(145), .DE(DrawArea), .C0(0),     .C1(0),     .PrevBitCnt(PrevBitCntR),.tmds(tmds_r),.BitCnt(BitCntR));
-	get_dvi_tmds_10_bit_from_8 cdr_insr_g(.D(200), .DE(DrawArea), .C0(0),     .C1(0),     .PrevBitCnt(PrevBitCntG),.tmds(tmds_g),.BitCnt(BitCntG));
-	get_dvi_tmds_10_bit_from_8 cdr_insr_b(.D(100), .DE(DrawArea), .C0(hSync), .C1(vSync), .PrevBitCnt(PrevBitCntB),.tmds(tmds_b),.BitCnt(BitCntB));
+	reg[7:0] R_str_val;
+	
+	always @(posedge pix_clk) begin
+		R <= (200 < x_cntr && x_cntr < 300) ? R_str_val : 0;
+		G <= (300 < x_cntr && x_cntr < 400) ? 10 : 0;
+		B <= (400 < x_cntr && x_cntr < 500) ? 10 : 0;
+	end
+	
+	get_dvi_tmds_10_bit_from_8 cdr_insr_r(.D(R), .DE(DrawArea), .C0(0),     .C1(0),     .PrevBitCnt(PrevBitCntR),.tmds(tmds_r),.BitCnt(BitCntR));
+	get_dvi_tmds_10_bit_from_8 cdr_insr_g(.D(G), .DE(DrawArea), .C0(0),     .C1(0),     .PrevBitCnt(PrevBitCntG),.tmds(tmds_g),.BitCnt(BitCntG));
+	get_dvi_tmds_10_bit_from_8 cdr_insr_b(.D(B), .DE(DrawArea), .C0(hSync), .C1(vSync), .PrevBitCnt(PrevBitCntB),.tmds(tmds_b),.BitCnt(BitCntB));
 	
 	always @(posedge pix_clk) begin
 		if(x_cntr == MAX_X_ALL)begin
@@ -152,40 +164,59 @@ module mydvi(
 
 	always @(posedge tmds_clk) begin
 		if(bit_cnt_r == 0) begin
-			signal_r <= tmds_r_load[9];
-			shift_reg_r <= {tmds_r_load[8:0], 1'b0};
+			signal_r <= tmds_r_load[0];
+			shift_reg_r <= {1'b0, tmds_r_load[9:1]};
 			bit_cnt_r <= 9;
 		end else begin
-			signal_r <= shift_reg_r[9];
-			shift_reg_r <= {shift_reg_r[8:0], 1'b0};
+			signal_r <= shift_reg_r[0];
+			shift_reg_r <= {1'b0, shift_reg_r[9:1]};
 			bit_cnt_r <= bit_cnt_r - 1;
 		end
 	end
 
 	always @(posedge tmds_clk) begin
 		if(bit_cnt_g == 0) begin
-			signal_g <= tmds_g_load[9];
-			shift_reg_g <= {tmds_g_load[8:0], 1'b0};
+			signal_g <= tmds_g_load[0];
+			shift_reg_g <= {1'b0, tmds_g_load[9:1]};
 			bit_cnt_g <= 9;
 		end else begin
-			signal_g <= shift_reg_g[9];
-			shift_reg_g <= {shift_reg_g[8:0], 1'b0};
+			signal_g <= shift_reg_g[0];
+			shift_reg_g <= {1'b0, shift_reg_g[9:1]};
 			bit_cnt_g <= bit_cnt_g - 1;
 		end
 	end
 
 	always @(posedge tmds_clk) begin
 		if(bit_cnt_b == 0) begin
-			signal_b <= tmds_b_load[9];
-			shift_reg_b <= {tmds_b_load[8:0], 1'b0};
+			signal_b <= tmds_b_load[0];
+			shift_reg_b <= {1'b0, tmds_b_load[9:1]};
 			bit_cnt_b <= 9;
 		end else begin
-			signal_b <= shift_reg_b[9];
-			shift_reg_b <= {shift_reg_b[8:0], 1'b0};
+			signal_b <= shift_reg_b[0];
+			shift_reg_b <= {1'b0, shift_reg_b[9:1]};
 			bit_cnt_b <= bit_cnt_b - 1;
 		end
 	end
 	
+
+/*debug*/
+	
+
+	reg[31:0] disp_7seg_clk_div_ntr;
+	always @(posedge pix_clk) disp_7seg_clk_div_ntr <= disp_7seg_clk_div_ntr + 1;
+	NumberOn3_7Seg NumberOn3_7Seg_inst(
+		.seg_sw_clk(disp_7seg_clk_div_ntr[10]),
+		.Num(R_str_val),
+
+		.Seg(disp_7seg_segments),
+		.Dig(disp_7seg_dig)
+	);
+	
+	always @(posedge disp_7seg_clk_div_ntr[20]) R_str_val <= R_str_val + 1;
+	
+	
+/*end debug*/
+
 
 /* not synthesized */
 	initial begin
@@ -223,10 +254,14 @@ module main(
 	output wire led5,
 	output wire led6,
 	
+	output wire [7:0] disp_7seg_segments,
+	output wire [2:0] disp_7seg_dig,
+	
 	output wire HDMI_CLK,
 	output wire HDMI_D0,
 	output wire HDMI_D1,
 	output wire HDMI_D2
+	
 );
 
 	wire tmds_clk;
@@ -245,13 +280,16 @@ module main(
 		cnt1 <= cnt1 + 1;		
 	end
 	
-	mydvi mydvi_ist1(
+	mydvi mydvi_inst1(
 		.pix_clk(pix_clk),
 		.tmds_clk(tmds_clk),
 
-		.signal_r(HDMI_D0),
+		.signal_r(HDMI_D2),
 		.signal_g(HDMI_D1),
-		.signal_b(HDMI_D2)
+		.signal_b(HDMI_D0),
+
+		.disp_7seg_segments(disp_7seg_segments),
+		.disp_7seg_dig(disp_7seg_dig)	
 	);
 
 endmodule
