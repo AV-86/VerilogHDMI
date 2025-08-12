@@ -215,10 +215,9 @@ module mydvi(
 	reg val_is_inc;	
 	always @(posedge disp_7seg_clk_div_ntr[16]) begin
 		if((R_str_val == 254 && val_is_inc) || (R_str_val == 0 && ~val_is_inc)) val_is_inc <= ~val_is_inc;
-		
 		R_str_val <= val_is_inc ? R_str_val + 1 : (R_str_val != 0) ? R_str_val - 1 : 0;
-		G_str_val <= (R_str_val + 85 > 255) ? 426 - R_str_val : R_str_val + 85;
-		B_str_val <= (R_str_val + 171 > 255) ? 340 - R_str_val : R_str_val + 171;
+		G_str_val <= (R_str_val + 85 > 255) ? (val_is_inc ? 426 - R_str_val : R_str_val - 85) : R_str_val + 85;
+		B_str_val <= (R_str_val + 171 > 255) ? (val_is_inc ? 340 - R_str_val : R_str_val - 171) : R_str_val + 171;
 	end
 /*endregion debug*/
 
