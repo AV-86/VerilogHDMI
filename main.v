@@ -10,15 +10,15 @@ module get_xor_xnor_encoded_9_bit(
 		xnor_xor = (n_ones_inp > 4) | ((n_ones_inp == 4) & (bits_in[0] == 0));
 
 		xor_xnor_encoded_9_bit[0] = bits_in[0];
-		xor_xnor_encoded_9_bit[1] = xor_xnor_encoded_9_bit[0] ^ bits_in[1];
-		xor_xnor_encoded_9_bit[2] = xor_xnor_encoded_9_bit[1] ^ bits_in[2];
-		xor_xnor_encoded_9_bit[3] = xor_xnor_encoded_9_bit[2] ^ bits_in[3];
-		xor_xnor_encoded_9_bit[4] = xor_xnor_encoded_9_bit[3] ^ bits_in[4];
-		xor_xnor_encoded_9_bit[5] = xor_xnor_encoded_9_bit[4] ^ bits_in[5];
-		xor_xnor_encoded_9_bit[6] = xor_xnor_encoded_9_bit[5] ^ bits_in[6];
-		xor_xnor_encoded_9_bit[7] = xor_xnor_encoded_9_bit[6] ^ bits_in[7];
-		xor_xnor_encoded_9_bit[8] = 1;
-		xor_xnor_encoded_9_bit = xnor_xor ? ~xor_xnor_encoded_9_bit : xor_xnor_encoded_9_bit ;
+		xor_xnor_encoded_9_bit[1] = xnor_xor ? ~(xor_xnor_encoded_9_bit[0] ^ bits_in[1]) : (xor_xnor_encoded_9_bit[0] ^ bits_in[1]);
+		xor_xnor_encoded_9_bit[2] = xnor_xor ? ~(xor_xnor_encoded_9_bit[1] ^ bits_in[2]) : (xor_xnor_encoded_9_bit[1] ^ bits_in[2]);
+		xor_xnor_encoded_9_bit[3] = xnor_xor ? ~(xor_xnor_encoded_9_bit[2] ^ bits_in[3]) : (xor_xnor_encoded_9_bit[2] ^ bits_in[3]);
+		xor_xnor_encoded_9_bit[4] = xnor_xor ? ~(xor_xnor_encoded_9_bit[3] ^ bits_in[4]) : (xor_xnor_encoded_9_bit[3] ^ bits_in[4]);
+		xor_xnor_encoded_9_bit[5] = xnor_xor ? ~(xor_xnor_encoded_9_bit[4] ^ bits_in[5]) : (xor_xnor_encoded_9_bit[4] ^ bits_in[5]);
+		xor_xnor_encoded_9_bit[6] = xnor_xor ? ~(xor_xnor_encoded_9_bit[5] ^ bits_in[6]) : (xor_xnor_encoded_9_bit[5] ^ bits_in[6]);
+		xor_xnor_encoded_9_bit[7] = xnor_xor ? ~(xor_xnor_encoded_9_bit[6] ^ bits_in[7]) : (xor_xnor_encoded_9_bit[6] ^ bits_in[7]);
+		xor_xnor_encoded_9_bit[8] = xnor_xor ? 0 : 1;
+
 	end
 endmodule
 
@@ -77,6 +77,7 @@ module get_dvi_tmds_10_bit_from_8(
 	end
 endmodule
 
+/* region MyDVI*/
 module mydvi(
 	input wire pix_clk,
 	input wire tmds_clk,
@@ -122,11 +123,13 @@ module mydvi(
 	reg[7:0] R; reg[7:0] G; reg[7:0] B;
 	
 	reg[7:0] R_str_val;
+	reg[7:0] G_str_val;
+	reg[7:0] B_str_val;
 	
 	always @(posedge pix_clk) begin
 		R <= (200 < x_cntr && x_cntr < 300) ? R_str_val : 0;
-		G <= (300 < x_cntr && x_cntr < 400) ? 10 : 0;
-		B <= (400 < x_cntr && x_cntr < 500) ? 10 : 0;
+		G <= (300 < x_cntr && x_cntr < 400) ? G_str_val : 0;
+		B <= (400 < x_cntr && x_cntr < 500) ? B_str_val : 0;
 	end
 	
 	get_dvi_tmds_10_bit_from_8 cdr_insr_r(.D(R), .DE(DrawArea), .C0(0),     .C1(0),     .PrevBitCnt(PrevBitCntR),.tmds(tmds_r),.BitCnt(BitCntR));
@@ -197,11 +200,8 @@ module mydvi(
 			bit_cnt_b <= bit_cnt_b - 1;
 		end
 	end
-	
 
-/*debug*/
-	
-
+/* region debug*/
 	reg[31:0] disp_7seg_clk_div_ntr;
 	always @(posedge pix_clk) disp_7seg_clk_div_ntr <= disp_7seg_clk_div_ntr + 1;
 	NumberOn3_7Seg NumberOn3_7Seg_inst(
@@ -212,13 +212,17 @@ module mydvi(
 		.Dig(disp_7seg_dig)
 	);
 	
-	always @(posedge disp_7seg_clk_div_ntr[20]) R_str_val <= R_str_val + 1;
-	
-	
-/*end debug*/
+	reg val_is_inc;	
+	always @(posedge disp_7seg_clk_div_ntr[16]) begin
+		if((R_str_val == 254 && val_is_inc) || (R_str_val == 0 && ~val_is_inc)) val_is_inc <= ~val_is_inc;
+		
+		R_str_val <= val_is_inc ? R_str_val + 1 : (R_str_val != 0) ? R_str_val - 1 : 0;
+		G_str_val <= (R_str_val + 85 > 255) ? 426 - R_str_val : R_str_val + 85;
+		B_str_val <= (R_str_val + 171 > 255) ? 340 - R_str_val : R_str_val + 171;
+	end
+/*endregion debug*/
 
-
-/* not synthesized */
+/*region not synthesized */
 	initial begin
         x_cntr = 0;
         y_cntr = 0;
@@ -242,9 +246,10 @@ module mydvi(
 		hSync = 0;
 		vSync = 0;
     end
-/* end not synthesized */
+/* endregion not synthesized */
 
 endmodule
+/* endregion MyDVI*/
 
 
 module main(
@@ -261,7 +266,6 @@ module main(
 	output wire HDMI_D0,
 	output wire HDMI_D1,
 	output wire HDMI_D2
-	
 );
 
 	wire tmds_clk;
