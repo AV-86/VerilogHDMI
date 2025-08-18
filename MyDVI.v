@@ -79,6 +79,7 @@ endmodule
 
 
 module get_rgb(
+	input wire pix_clk,
 	input wire[12:0] x,
 	input wire[12:0] y,
 
@@ -86,23 +87,36 @@ module get_rgb(
 	output reg [7:0] g,
 	output reg [7:0] b
 );
-	reg[7:0] R_str_val;
-	reg[7:0] G_str_val;
-	reg[7:0] B_str_val;
 
-	reg val_is_inc;	
-	always @(posedge y[6]) begin
-		if((R_str_val == 254 && val_is_inc) || (R_str_val == 0 && ~val_is_inc)) val_is_inc <= ~val_is_inc;
-		R_str_val <= val_is_inc ? R_str_val + 1 : (R_str_val != 0) ? R_str_val - 1 : 0;
-		G_str_val <= (R_str_val + 85 > 255) ? (val_is_inc ? 426 - R_str_val : R_str_val - 85) : R_str_val + 85;
-		B_str_val <= (R_str_val + 171 > 255) ? (val_is_inc ? 340 - R_str_val : R_str_val - 171) : R_str_val + 171;
+	reg [10:0] x_pos;
+	reg [10:0] y_pos;
+
+	reg x_inc;
+	reg y_inc;
+
+	reg[27:0] dvdr_cntr;
+	always @(posedge  pix_clk) begin
+		dvdr_cntr <= dvdr_cntr + 1;
+		r <= (x > x_pos) && (x < (x_pos + 20)) && (y > y_pos) && (y < (y_pos + 20)) ? 250 : 0;
+		g <= (x > x_pos) && (x < (x_pos + 20)) && (y > y_pos) && (y < (y_pos + 20)) ? 250 : 0;
+		b <= (x > x_pos) && (x < (x_pos + 20)) && (y > y_pos) && (y < (y_pos + 20)) ? 250 : 0;
 	end
+	wire slow_clk = dvdr_cntr[16];
 	
-	always @(posedge x[0]) begin
-		r <= (200 < x && x < 300) ? R_str_val : 0;
-		g <= (300 < x && x < 400) ? G_str_val : 0;
-		b <= (400 < x && x < 500) ? B_str_val : 0;
-	end
+	always @(posedge  slow_clk) begin
+		x_pos = ~x_inc ? x_pos + 1 : x_pos - 1;
+		y_pos = ~y_inc ? y_pos + 1 : y_pos - 1;
+		
+		if((x_pos == 1359 - 20) || (x_pos == 0)) begin 
+	 		x_inc = ~x_inc;
+	 	end
+	 	
+		if((y_pos == 767 - 20) || (y_pos == 0)) begin 
+	 		y_inc = ~y_inc;
+	 	end
+		
+	 end
+
 endmodule
 
 
@@ -167,7 +181,7 @@ module mydvi(
 
 	wire[7:0] R; wire[7:0] G; wire[7:0] B;
 
-	get_rgb get_rgb_inst(.x(x_cntr), .y(y_cntr), .r(R), .g(G), .b(B));
+	get_rgb get_rgb_inst(.pix_clk(pix_clk), .x(x_cntr), .y(y_cntr), .r(R), .g(G), .b(B));
 	
 	get_dvi_tmds_10_bit_from_8 cdr_insr_r(.D(R), .DE(DrawArea), .C0(0),     .C1(0),     .PrevBitCnt(PrevBitCntR),.tmds(tmds_r),.BitCnt(BitCntR));
 	get_dvi_tmds_10_bit_from_8 cdr_insr_g(.D(G), .DE(DrawArea), .C0(0),     .C1(0),     .PrevBitCnt(PrevBitCntG),.tmds(tmds_g),.BitCnt(BitCntG));
