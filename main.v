@@ -1,8 +1,11 @@
 
 
 module main(
-	input wire clk,
+	input wire key1,
+	input wire key2,
 	
+	input wire clk,
+
 	
 	output wire led5,
 	output wire led6,
@@ -33,6 +36,9 @@ module main(
 	end
 	
 	mydvi mydvi_inst1(
+		.key1(key1),
+		.key2(key2),
+
 		.pix_clk(pix_clk),
 		.tmds_clk(tmds_clk),
 

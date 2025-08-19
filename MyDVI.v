@@ -79,6 +79,9 @@ endmodule
 
 
 module get_rgb(
+	input wire key1,
+	input wire key2,
+	
 	input wire pix_clk,
 	input wire[12:0] x,
 	input wire[12:0] y,
@@ -91,29 +94,70 @@ module get_rgb(
 	reg [10:0] x_pos;
 	reg [10:0] y_pos;
 
+	reg [10:0] racket_y_pos;	
+	reg [32:0] fall_pause_cntr;
+
 	reg x_inc;
 	reg y_inc;
 
 	reg[27:0] dvdr_cntr;
+	
+	reg is_fall_pause;
+	
+	wire draw_ball = ((x > x_pos) && (x < (x_pos + 20)) && (y > y_pos) && (y < (y_pos + 20))) && !is_fall_pause;
+	wire draw_racket = ((x > 0) && (x < (15)) && (y > racket_y_pos) && (y < (racket_y_pos + 100))) && !is_fall_pause;
+
+	wire display_white = draw_ball || draw_racket;
+
+	wire display_red = is_fall_pause;
+
 	always @(posedge  pix_clk) begin
 		dvdr_cntr <= dvdr_cntr + 1;
-		r <= (x > x_pos) && (x < (x_pos + 20)) && (y > y_pos) && (y < (y_pos + 20)) ? 250 : 0;
-		g <= (x > x_pos) && (x < (x_pos + 20)) && (y > y_pos) && (y < (y_pos + 20)) ? 250 : 0;
-		b <= (x > x_pos) && (x < (x_pos + 20)) && (y > y_pos) && (y < (y_pos + 20)) ? 250 : 0;
+		r <= display_white ? 250 : display_red ? 250 : 0;
+		g <= display_white ? 250 : display_red ? 0   : 0;
+		b <= display_white ? 250 : display_red ? 0   : 0;
 	end
 	wire slow_clk = dvdr_cntr[16];
 	
 	always @(posedge  slow_clk) begin
 		x_pos = ~x_inc ? x_pos + 1 : x_pos - 1;
 		y_pos = ~y_inc ? y_pos + 1 : y_pos - 1;
+	
+		if(is_fall_pause) begin
+			fall_pause_cntr = (fall_pause_cntr + 1);
+			if(fall_pause_cntr == 30) begin
+				x_pos = 1;
+				y_pos = 1;
+				x_inc = 0;
+				y_inc = 0;
+				racket_y_pos = 0;
+				is_fall_pause = 0;
+			end
+		end
+
+		if((x_pos == 0)) begin 
+			x_inc = ~x_inc;	 		
+			if((!((y_pos >= racket_y_pos) && ((y_pos + 20) <= (racket_y_pos + 100))))) begin
+				is_fall_pause = 1;
+				fall_pause_cntr = 0;
+			end
+	 	end
 		
-		if((x_pos == 1359 - 20) || (x_pos == 0)) begin 
+		if((x_pos == 1359 - 20)) begin 
 	 		x_inc = ~x_inc;
 	 	end
 	 	
 		if((y_pos == 767 - 20) || (y_pos == 0)) begin 
 	 		y_inc = ~y_inc;
 	 	end
+
+		if(~key1) begin
+			racket_y_pos <= racket_y_pos + 1;
+		end else begin
+			if(~key2) begin
+				racket_y_pos <= racket_y_pos - 1;
+			end
+		end 
 		
 	 end
 
@@ -123,6 +167,9 @@ endmodule
 
 /* region MyDVI*/
 module mydvi(
+	input wire key1,
+	input wire key2,
+
 	input wire pix_clk,
 	input wire tmds_clk,
 
@@ -181,7 +228,7 @@ module mydvi(
 
 	wire[7:0] R; wire[7:0] G; wire[7:0] B;
 
-	get_rgb get_rgb_inst(.pix_clk(pix_clk), .x(x_cntr), .y(y_cntr), .r(R), .g(G), .b(B));
+	get_rgb get_rgb_inst(.key1(key1), .key2(key2), .pix_clk(pix_clk), .x(x_cntr), .y(y_cntr), .r(R), .g(G), .b(B));
 	
 	get_dvi_tmds_10_bit_from_8 cdr_insr_r(.D(R), .DE(DrawArea), .C0(0),     .C1(0),     .PrevBitCnt(PrevBitCntR),.tmds(tmds_r),.BitCnt(BitCntR));
 	get_dvi_tmds_10_bit_from_8 cdr_insr_g(.D(G), .DE(DrawArea), .C0(0),     .C1(0),     .PrevBitCnt(PrevBitCntG),.tmds(tmds_g),.BitCnt(BitCntG));
@@ -293,3 +340,4 @@ module mydvi(
 
 endmodule
 /* endregion MyDVI*/
+
