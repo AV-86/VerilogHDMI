@@ -22,7 +22,7 @@ module main(
 	wire tmds_clk;
 	wire pix_clk;
 
-	PLL2 PLL2_inst(.inclk0(clk), .c1(tmds_clk), .c0(pix_clk));
+	PLL2 (.inclk0(clk), .c1(tmds_clk), .c0(pix_clk));
 	
 	assign HDMI_CLK = pix_clk;
 	

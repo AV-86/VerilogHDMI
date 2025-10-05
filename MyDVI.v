@@ -88,13 +88,18 @@ module get_rgb(
 
 	output reg [7:0] r,
 	output reg [7:0] g,
-	output reg [7:0] b
+	output reg [7:0] b,
+
+	output wire [7:0] disp_7seg_segments,
+	output wire [2:0] disp_7seg_dig
 );
 
 	reg [10:0] x_pos;
 	reg [10:0] y_pos;
 
-	reg [10:0] racket_y_pos;	
+	reg [10:0] racket_y_pos;
+	reg [9:0] score_cntr;
+	
 	reg [32:0] fall_pause_cntr;
 
 	reg x_inc;
@@ -131,15 +136,17 @@ module get_rgb(
 				x_inc = 0;
 				y_inc = 0;
 				racket_y_pos = 0;
+				score_cntr = 0;
 				is_fall_pause = 0;
 			end
 		end
 
 		if((x_pos == 0)) begin 
-			x_inc = ~x_inc;	 		
+			x_inc = ~x_inc;	
+			score_cntr <= score_cntr + 1;
 			if((!((y_pos >= racket_y_pos) && ((y_pos + 20) <= (racket_y_pos + 100))))) begin
 				is_fall_pause = 1;
-				fall_pause_cntr = 0;
+				fall_pause_cntr = 0;				
 			end
 	 	end
 		
@@ -160,6 +167,17 @@ module get_rgb(
 		end 
 		
 	 end
+
+ //score display
+	reg[31:0] disp_7seg_clk_div_ntr;
+	always @(posedge pix_clk) disp_7seg_clk_div_ntr <= disp_7seg_clk_div_ntr + 1;
+	NumberOn3_7Seg NumberOn3_7Seg_inst(
+		.seg_sw_clk(disp_7seg_clk_div_ntr[10]),
+		.Num(score_cntr),
+
+		.Seg(disp_7seg_segments),
+		.Dig(disp_7seg_dig)
+	);
 
 endmodule
 
@@ -228,7 +246,7 @@ module mydvi(
 
 	wire[7:0] R; wire[7:0] G; wire[7:0] B;
 
-	get_rgb get_rgb_inst(.key1(key1), .key2(key2), .pix_clk(pix_clk), .x(x_cntr), .y(y_cntr), .r(R), .g(G), .b(B));
+	get_rgb get_rgb_inst(.key1(key1), .key2(key2), .pix_clk(pix_clk), .x(x_cntr), .y(y_cntr), .r(R), .g(G), .b(B), .disp_7seg_segments(disp_7seg_segments), .disp_7seg_dig(disp_7seg_dig));
 	
 	get_dvi_tmds_10_bit_from_8 cdr_insr_r(.D(R), .DE(DrawArea), .C0(0),     .C1(0),     .PrevBitCnt(PrevBitCntR),.tmds(tmds_r),.BitCnt(BitCntR));
 	get_dvi_tmds_10_bit_from_8 cdr_insr_g(.D(G), .DE(DrawArea), .C0(0),     .C1(0),     .PrevBitCnt(PrevBitCntG),.tmds(tmds_g),.BitCnt(BitCntG));
@@ -299,18 +317,6 @@ module mydvi(
 		end
 	end
 
-/* region debug*/
-	reg[31:0] disp_7seg_clk_div_ntr;
-	always @(posedge pix_clk) disp_7seg_clk_div_ntr <= disp_7seg_clk_div_ntr + 1;
-	NumberOn3_7Seg NumberOn3_7Seg_inst(
-		.seg_sw_clk(disp_7seg_clk_div_ntr[10]),
-		.Num(42),
-
-		.Seg(disp_7seg_segments),
-		.Dig(disp_7seg_dig)
-	);	
-
-/*endregion debug*/
 
 /*region not synthesized */
 	initial begin
